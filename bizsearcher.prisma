@@ -1,0 +1,156 @@
+// Building a web app where I have a general "ContentObject" table which contains properties common to all content types and a meta table
+// for each object containing properties that are unique to that object (or at least are not common to other content types).
+
+datasource db {
+  url      = "file:data.db"
+  provider = "mysql"
+}
+
+model ContentObject {
+  id            Int   @id   @unique
+  title         String
+  description   String
+  excerpt       String
+  status        ContentStatus   @default(ACTIVE)
+  slug          String   @unique
+  type          ContentType
+  thumbnail     Image
+  createdBy     User
+  companyMeta   CompanyMeta?
+  personMeta    PersonMeta?
+  jobMeta       JobMeta?
+  eventMeta     EventMeta?  
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+}
+
+enum ContentStatus {
+  ACTIVE
+  DRAFT
+  PENDING
+  DELETED
+}
+
+enum ContentType {
+  COMPANY
+  PERSON
+  JOB
+  EVENT
+}
+
+model CompanyMeta {
+  id            Int  @id  @unique
+  contentObject ContentObject
+  events        ContentObject @relation(link: TABLE, name: "CompanyEventRelationships")
+  incorporated  DateTime?
+  email         String?
+  phone         String?
+  in_url        String?
+  fb_url        String?
+  tw_url        String?
+  categories    Term[]
+  tags          Term[]
+}
+
+model EventMeta {
+  id              Int   @id   @unique
+  contentObject   ContentObject
+  companies       ContentObject @relation(link: TABLE, name: "CompanyEventRelationships")
+  startDate       DateTime
+  endDate         DateTime
+  price           Int
+  registrationUrl String
+  categories      Term[]
+  tags            Term[]
+}
+
+model CompanyEventRelationships @relationTable {
+  id        Int   @id
+  company   ContentObject
+  event     ContentObject
+}
+
+model PersonMeta {
+  id                Int  @id  @unique
+  contentObject     ContentObject
+  firstName         String
+  lastName          String
+  email             String?
+  gender            Term
+  type              PersonType
+  userID            User
+  companiesFounded  ContentObject?
+}
+
+enum PersonType {
+  SHAREHOLDER
+  DIRECTOR
+}
+
+model jobMeta {
+  id              Int  @id  @unique
+  categories      Term[]
+  tags            Term[]
+  # .... other fields.
+}
+
+model Image {
+  id        Int   @id   @unique
+  file      String  @unique
+  size      ImageSize
+  width     Int
+  height    Int  
+  mimeType  String
+}
+
+enum ImageSize {
+  ORIGINAL
+  THUMBNAIL
+  MEDIUM
+  LARGE
+}
+
+// This models the WordPress Hierarchical Term/Taxonomy
+model Term {
+  id        Int  @id  @unique
+  name      String
+  slug      String  @unique
+}
+
+model TermRelationship {
+  object_id         ContentObject
+  term_taxonomy_id  TermTaxonomy
+}
+
+model TermTaxonomy {
+  id            Int   @id
+  term          Term
+  taxonomy      TaxonomyType
+  parent        TermTaxonomy
+  count         Int @default(value: 0)
+  description   String?
+  order         Int @default(value: 0)
+}
+
+enum TaxonomyType {
+  CATEGORY
+  TAG
+  GENDER
+}
+
+model User {
+  id            Int   @id
+  displayName   String
+  activationKey String
+  email         String   @unique
+  password      String
+  firstName     String
+  lastName      String
+  role          Role    @default(USER)
+  createdAt     DateTime @default(now())
+}
+
+enum Role {
+  USER
+  ADMIN
+}
